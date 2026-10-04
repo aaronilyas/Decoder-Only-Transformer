@@ -1,0 +1,29 @@
+{
+  "train": {
+    "total": 60000,
+    "categories": {
+      "natural_language": 30000,
+      "linear_system": 18000,
+      "linear_system_word_problem": 12000
+    },
+    "bytes": 28348316
+  },
+  "val": {
+    "total": 6000,
+    "categories": {
+      "natural_language": 3000,
+      "linear_system": 1800,
+      "linear_system_word_problem": 1200
+    },
+    "bytes": 2864428
+  },
+  "test": {
+    "total": 6000,
+    "categories": {
+      "natural_language": 3000,
+      "linear_system": 1800,
+      "linear_system_word_problem": 1200
+    },
+    "bytes": 2890898
+  }
+}
