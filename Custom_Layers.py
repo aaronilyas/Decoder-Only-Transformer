@@ -5,27 +5,26 @@ from torch import Tensor
 from torch.nn import Module, Parameter
 
 
-class WordEmbedding_Layer(Module):
+class WordEmbedding(Module):
     """Learnable token lookup table of shape (vocab_size, embedding_dim)."""
 
-    weight_matrix: Parameter
+    weight: Parameter
 
-    def __init__(self, number_of_word_embeddings: int, size_of_each_word_embedding: int) -> None:
+    def __init__(self, vocab_size: int, embedding_dim: int) -> None:
         super().__init__()
-        if number_of_word_embeddings < 1 or size_of_each_word_embedding < 1:
-            raise ValueError("vocabulary size and embedding dimension must be positive")
+        if vocab_size < 1 or embedding_dim < 1:
+            raise ValueError("vocab_size and embedding_dim must be positive")
 
-        self.weight_matrix = Parameter(
-            torch.randn(number_of_word_embeddings, size_of_each_word_embedding)
-        )
-
-    def get_word_embedding_matrix(self) -> Tensor:
-        return self.weight_matrix
+        self.weight = Parameter(torch.randn(vocab_size, embedding_dim))
 
     def forward(self, token_ids: Tensor) -> Tensor:
         if token_ids.dtype.is_floating_point or token_ids.dtype == torch.bool:
             raise TypeError("token_ids must be an integer tensor of token indices")
-        return self.weight_matrix[token_ids.long()]
+        # Tensor indexing wraps negatives onto the last rows; reject them first.
+        vocab_size = self.weight.shape[0]
+        if torch.any(token_ids < 0) or torch.any(token_ids >= vocab_size):
+            raise IndexError(f"token ids must be in [0, {vocab_size})")
+        return self.weight[token_ids.long()]
 
 
 def _sinusoidal_positional_encoding(max_seq_len: int, embedding_dim: int) -> Tensor:
@@ -47,27 +46,24 @@ def _sinusoidal_positional_encoding(max_seq_len: int, embedding_dim: int) -> Ten
     return encoding
 
 
-class Position_Encoded_Word_Embedding_Layer(Module):
-    """Adds a precomputed sinusoidal positional encoding to token embeddings."""
+class PositionalWordEmbedding(Module):
+    """Adds a fixed sinusoidal positional encoding to token embeddings."""
 
-    position_encoded_word_embedding_matrix: Tensor
+    positional_encoding: Tensor
 
-    def __init__(self, size_of_each_word_embedding: int, max_seq_len: int) -> None:
+    def __init__(self, embedding_dim: int, max_seq_len: int) -> None:
         super().__init__()
-        if size_of_each_word_embedding < 1 or max_seq_len < 1:
-            raise ValueError("embedding dimension and max_seq_len must be positive")
+        if embedding_dim < 1 or max_seq_len < 1:
+            raise ValueError("embedding_dim and max_seq_len must be positive")
 
-        encoding = _sinusoidal_positional_encoding(max_seq_len, size_of_each_word_embedding)
-        self.register_buffer("position_encoded_word_embedding_matrix", encoding)
-
-    def get_position_encoded_word_embedding_matrix(self) -> Tensor:
-        return self.position_encoded_word_embedding_matrix
+        encoding = _sinusoidal_positional_encoding(max_seq_len, embedding_dim)
+        self.register_buffer("positional_encoding", encoding)
 
     def forward(self, embeddings: Tensor) -> Tensor:
         if embeddings.ndim < 2:
             raise ValueError("embeddings must have shape (..., seq_len, embedding_dim)")
 
-        positional = self.position_encoded_word_embedding_matrix
+        positional = self.positional_encoding
         seq_len = embeddings.shape[-2]
         embedding_dim = embeddings.shape[-1]
         if embedding_dim != positional.shape[1]:
