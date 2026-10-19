@@ -111,7 +111,7 @@ def test_positional_forward_adds_the_sequence_index_without_changing_the_input()
     words = WordEmbedding(vocab_size, embedding_dim)
     positions = PositionalWordEmbedding(embedding_dim, max_seq_len=9)
 
-    token_ids = torch.tensor([[5, 5, 1, 5]])
+    token_ids = torch.tensor([[5, 5, 1, 5], [0, 1, 0, 0]])
     embeddings = words(token_ids)
     before = embeddings.detach().clone()
     encoded = positions(embeddings)
@@ -130,7 +130,7 @@ def test_positional_forward_adds_the_sequence_index_without_changing_the_input()
     )
     # Different words at one index differ by their table rows only.
     torch.testing.assert_close(
-        encoded[0, 1] - encoded[0, 2],
+        encoded[0, 1] - encoded[1, 1],
         words.weight[5] - words.weight[1],
     )
 
