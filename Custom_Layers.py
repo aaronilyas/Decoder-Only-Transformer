@@ -20,9 +20,10 @@ class WordEmbedding(Module):
     def forward(self, token_ids: Tensor) -> Tensor:
         if token_ids.dtype.is_floating_point or token_ids.dtype == torch.bool:
             raise TypeError("token_ids must be an integer tensor of token indices")
-        # Tensor indexing wraps negatives onto the last rows; reject them first.
+        # Indexing wraps negatives. One combined reduction syncs at most once.
         vocab_size = self.weight.shape[0]
-        if torch.any(token_ids < 0) or torch.any(token_ids >= vocab_size):
+        out_of_range = (token_ids < 0) | (token_ids >= vocab_size)
+        if torch.any(out_of_range):
             raise IndexError(f"token ids must be in [0, {vocab_size})")
         return self.weight[token_ids.long()]
 
